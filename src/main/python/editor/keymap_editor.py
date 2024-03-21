@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import json
 
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QMessageBox, QWidget
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QMessageBox, QWidget
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from any_keycode_dialog import AnyKeycodeDialog
 from editor.basic_editor import BasicEditor
@@ -48,7 +48,7 @@ class KeymapEditor(BasicEditor):
         layout = QVBoxLayout()
         layout.addLayout(layout_labels_container)
         layout.addWidget(self.container)
-        layout.setAlignment(self.container, Qt.AlignHCenter)
+        layout.setAlignment(self.container, Qt.AlignmentFlag.AlignHCenter)
         w = ClickableWidget()
         w.setLayout(layout)
         w.clicked.connect(self.on_empty_space_clicked)
@@ -88,7 +88,7 @@ class KeymapEditor(BasicEditor):
         # create new layer labels
         for x in range(self.keyboard.layers):
             btn = SquareButton(str(x))
-            btn.setFocusPolicy(Qt.NoFocus)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.setRelSize(1.667)
             btn.setCheckable(True)
             btn.clicked.connect(lambda state, idx=x: self.switch_layer(idx))
@@ -96,7 +96,7 @@ class KeymapEditor(BasicEditor):
             self.layer_buttons.append(btn)
         for x in range(0,2):
             btn = SquareButton("-") if x else SquareButton("+")
-            btn.setFocusPolicy(Qt.NoFocus)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.setCheckable(False)
             btn.clicked.connect(lambda state, idx=x: self.adjust_size(idx))
             self.layout_size.addWidget(btn)
@@ -138,8 +138,8 @@ class KeymapEditor(BasicEditor):
             ret = QMessageBox.question(self.widget(), "",
                                        tr("KeymapEditor", "Saved keymap belongs to a different keyboard,"
                                                           " are you sure you want to continue?"),
-                                       QMessageBox.Yes | QMessageBox.No)
-            if ret != QMessageBox.Yes:
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if ret != QMessageBox.StandardButton.Yes:
                 return
         self.keyboard.restore_layout(data)
         self.refresh_layer_display()

@@ -1,7 +1,7 @@
 # coding: utf-8
 # SPDX-License-Identifier: GPL-2.0-or-later
-from PyQt5.QtCore import QObject, pyqtSignal, Qt
-from PyQt5.QtWidgets import QHBoxLayout, QToolButton, QComboBox
+from PyQt6.QtCore import QObject, pyqtSignal, Qt
+from PyQt6.QtWidgets import QHBoxLayout, QToolButton, QComboBox
 
 from macro.macro_action_ui import ActionTextUI, ActionDownUI, ActionUpUI, ActionTapUI, ActionDelayUI
 from protocol.constants import VIAL_PROTOCOL_ADVANCED_MACROS
@@ -27,12 +27,12 @@ class MacroLine(QObject):
         self.arrows = QHBoxLayout()
         self.btn_up = QToolButton()
         self.btn_up.setText("▲")
-        self.btn_up.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_up.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_up.clicked.connect(self.on_move_up)
         self.btn_down = QToolButton()
         self.btn_down.setText("▼")
         self.btn_down.clicked.connect(self.on_move_down)
-        self.btn_down.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_down.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
 
         self.arrows.addWidget(self.btn_up)
         self.arrows.addWidget(self.btn_down)
@@ -49,7 +49,7 @@ class MacroLine(QObject):
 
         self.btn_remove = QToolButton()
         self.btn_remove.setText("×")
-        self.btn_remove.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_remove.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_remove.clicked.connect(self.on_remove_clicked)
 
     def insert(self, row):

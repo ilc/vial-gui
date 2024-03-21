@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import json
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QPushButton, QGridLayout, QHBoxLayout, QToolButton, QVBoxLayout, \
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QPushButton, QGridLayout, QHBoxLayout, QToolButton, QVBoxLayout, \
     QWidget, QMenu, QScrollArea, QFrame
 
 from keycodes.keycodes import Keycode
@@ -47,17 +47,17 @@ class MacroTab(QVBoxLayout):
 
         self.btn_add = QToolButton()
         self.btn_add.setText(tr("MacroRecorder", "Add action"))
-        self.btn_add.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_add.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_add.clicked.connect(self.on_add)
 
         self.btn_tap_enter = QToolButton()
         self.btn_tap_enter.setText(tr("MacroRecorder", "Tap Enter"))
-        self.btn_tap_enter.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_tap_enter.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_tap_enter.clicked.connect(self.on_tap_enter)
 
         self.btn_text_window = QToolButton()
         self.btn_text_window.setText(tr("MacroRecorder", "Open Text Editor..."))
-        self.btn_text_window.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_text_window.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_text_window.clicked.connect(self.on_text_window)
 
         layout_buttons = QHBoxLayout()

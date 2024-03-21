@@ -3,12 +3,16 @@ import logging
 import platform
 from json import JSONDecodeError
 
-from PyQt5.QtCore import Qt, QSettings, QStandardPaths, QTimer, QRect, QT_VERSION_STR
-from PyQt5.QtWidgets import QWidget, QComboBox, QToolButton, QHBoxLayout, QVBoxLayout, QMainWindow, QAction, qApp, \
-    QFileDialog, QDialog, QTabWidget, QActionGroup, QMessageBox, QLabel
-
+from PyQt6.QtCore import Qt, QSettings, QStandardPaths, QTimer, QRect, QT_VERSION_STR
+from PyQt6.QtWidgets import QWidget, QComboBox, QToolButton, QHBoxLayout, QVBoxLayout, QMainWindow, \
+    QFileDialog, QDialog, QTabWidget, QMessageBox, QLabel
+from PyQt6.QtGui import QAction, QActionGroup
+import PyQt6
 import os
 import sys
+
+#import qdarktheme
+qApp = PyQt6.QtWidgets.QApplication
 
 from about_keyboard import AboutKeyboard
 from autorefresh.autorefresh import Autorefresh
@@ -50,17 +54,19 @@ class MainWindow(QMainWindow):
 
         _pos = self.settings.value("pos", None)
         # NOTE: QDesktopWidget is obsolete, but QApplication.screenAt only usable in Qt 5.10+
-        if _pos and qApp.desktop().geometry().contains(QRect(_pos, self.size())):
+#        if _pos and qApp.desktop().geometry().contains(QRect(_pos, self.size())):
         #if _pos and qApp.screenAt(_pos) and qApp.screenAt(_pos + (self.rect().bottomRight())):
-            self.move(self.settings.value("pos"))
+ #           self.move(self.settings.value("pos"))
 
         themes.Theme.set_theme(self.get_theme())
+#        qdarktheme.setup_theme()
+#        qApp.setPalette(qdarktheme.load_palette())
 
         self.combobox_devices = QComboBox()
         self.combobox_devices.currentIndexChanged.connect(self.on_device_selected)
 
         self.btn_refresh_devices = QToolButton()
-        self.btn_refresh_devices.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.btn_refresh_devices.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.btn_refresh_devices.setText(tr("MainWindow", "Refresh"))
         self.btn_refresh_devices.clicked.connect(self.on_click_refresh)
 
@@ -101,14 +107,14 @@ class MainWindow(QMainWindow):
                           'Follow the instructions linked below:<br>' \
                           '<a href="https://get.vial.today/manual/linux-udev.html">https://get.vial.today/manual/linux-udev.html</a>'
         self.lbl_no_devices = QLabel(tr("MainWindow", no_devices))
-        self.lbl_no_devices.setTextFormat(Qt.RichText)
-        self.lbl_no_devices.setAlignment(Qt.AlignCenter)
+        self.lbl_no_devices.setTextFormat(Qt.TextFormat.RichText)
+        self.lbl_no_devices.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QVBoxLayout()
         layout.addLayout(layout_combobox)
         layout.addWidget(self.tabs, 1)
         layout.addWidget(self.lbl_no_devices)
-        layout.setAlignment(self.lbl_no_devices, Qt.AlignHCenter)
+        layout.setAlignment(self.lbl_no_devices, Qt.AlignmentFlag.AlignHCenter)
         self.tray_keycodes = TabbedKeycodes()
         self.tray_keycodes.make_tray()
         layout.addWidget(self.tray_keycodes, 1)
@@ -123,7 +129,7 @@ class MainWindow(QMainWindow):
         self.autorefresh.devices_updated.connect(self.on_devices_updated)
 
         # cache for via definition files
-        self.cache_path = QStandardPaths.writableLocation(QStandardPaths.CacheLocation)
+        self.cache_path = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
         if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
 
@@ -237,9 +243,9 @@ class MainWindow(QMainWindow):
     def on_layout_load(self):
         dialog = QFileDialog()
         dialog.setDefaultSuffix("vil")
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         dialog.setNameFilters(["Vial layout (*.vil)"])
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             with open(dialog.selectedFiles()[0], "rb") as inf:
                 data = inf.read()
             self.keymap_editor.restore_layout(data)
@@ -248,9 +254,9 @@ class MainWindow(QMainWindow):
     def on_layout_save(self):
         dialog = QFileDialog()
         dialog.setDefaultSuffix("vil")
-        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         dialog.setNameFilters(["Vial layout (*.vil)"])
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             with open(dialog.selectedFiles()[0], "wb") as outf:
                 outf.write(self.keymap_editor.save_layout())
 
@@ -335,9 +341,9 @@ class MainWindow(QMainWindow):
     def on_sideload_json(self):
         dialog = QFileDialog()
         dialog.setDefaultSuffix("json")
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         dialog.setNameFilters(["VIA layout JSON (*.json)"])
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             with open(dialog.selectedFiles()[0], "rb") as inf:
                 data = inf.read()
             self.autorefresh.sideload_via_json(data)
@@ -345,9 +351,9 @@ class MainWindow(QMainWindow):
     def on_load_dummy(self):
         dialog = QFileDialog()
         dialog.setDefaultSuffix("json")
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         dialog.setNameFilters(["VIA layout JSON (*.json)"])
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             with open(dialog.selectedFiles()[0], "rb") as inf:
                 data = inf.read()
             self.autorefresh.load_dummy(data)
@@ -393,7 +399,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("theme", theme)
         msg = QMessageBox()
         msg.setText(tr("MainWindow", "In order to fully apply the theme you should restart the application."))
-        msg.exec_()
+        msg.exec()
 
     def on_tab_changed(self, index):
         TabbedKeycodes.close_tray()

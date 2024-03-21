@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel, QCheckBox, QScrollArea, QFrame, QToolButton
+from PyQt6 import QtCore
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
+from PyQt6.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel, QCheckBox, QScrollArea, QFrame, QToolButton
 
 from protocol.constants import VIAL_PROTOCOL_DYNAMIC
 from util import make_scrollable, tr
@@ -123,10 +123,10 @@ class LayersUI(QWidget):
             w.stateChanged.connect(self.on_change)
         btn_all_layers = QToolButton()
         btn_all_layers.setText(tr("KeyOverride", "Enable all"))
-        btn_all_layers.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        btn_all_layers.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         btn_no_layers = QToolButton()
         btn_no_layers.setText(tr("KeyOverride", "Disable all"))
-        btn_no_layers.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        btn_no_layers.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         btn_all_layers.clicked.connect(self.on_enable_all_layers)
         btn_no_layers.clicked.connect(self.on_disable_all_layers)
 
@@ -191,11 +191,11 @@ class KeyOverrideEntryUI(QObject):
         self.populate_container()
 
         w = QWidget()
-        w.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        w.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         w.setLayout(self.container)
         l = QVBoxLayout()
         l.addWidget(w)
-        l.setAlignment(w, QtCore.Qt.AlignHCenter)
+        l.setAlignment(w, QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.w2 = make_scrollable(l)
 
     def populate_container(self):

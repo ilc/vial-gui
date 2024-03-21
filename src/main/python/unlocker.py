@@ -2,9 +2,9 @@
 import sys
 import time
 
-from PyQt5.QtCore import Qt, QTimer, QCoreApplication, QByteArray, QBuffer, QIODevice
-from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QProgressBar, QDialog, QApplication
+from PyQt6.QtCore import Qt, QTimer, QCoreApplication, QByteArray, QBuffer, QIODevice
+from PyQt6.QtGui import QPalette
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QProgressBar, QDialog, QApplication
 
 from widgets.keyboard_widget import KeyboardWidget
 from util import tr
@@ -16,7 +16,7 @@ class Unlocker(QDialog):
         super().__init__()
 
         self.setStyleSheet("background-color: {}".format(
-            QApplication.palette().color(QPalette.Button).lighter(130).name()))
+            QApplication.palette().color(QPalette.ColorRole.Button).lighter(130).name()))
 
         self.keyboard = keyboard
 
@@ -35,12 +35,12 @@ class Unlocker(QDialog):
         self.keyboard_reference.set_enabled(False)
         self.keyboard_reference.set_scale(0.5)
         layout.addWidget(self.keyboard_reference)
-        layout.setAlignment(self.keyboard_reference, Qt.AlignHCenter)
+        layout.setAlignment(self.keyboard_reference, Qt.AlignmentFlag.AlignHCenter)
 
         layout.addWidget(self.progress)
 
         self.setLayout(layout)
-        self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowTitleHint | Qt.WindowType.CustomizeWindowHint)
 
         self.update_reference()
         self.timer = QTimer()

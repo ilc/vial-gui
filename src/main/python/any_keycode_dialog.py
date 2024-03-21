@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLineEdit, QLabel
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLineEdit, QLabel
 
 from keycodes.keycodes import Keycode
 from util import tr
@@ -12,7 +12,7 @@ class AnyKeycodeDialog(QDialog):
 
         self.setWindowTitle(tr("AnyKeycodeDialog", "Enter an arbitrary keycode"))
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
@@ -52,4 +52,4 @@ class AnyKeycodeDialog(QDialog):
             self.value = ""
             self.lbl_computed.setText(tr("AnyKeycodeDialog", "Invalid input"))
 
-        self.buttons.button(QDialogButtonBox.Ok).setEnabled(self.value != "")
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.value != "")

@@ -6,9 +6,9 @@ import sys
 import time
 from logging.handlers import RotatingFileHandler
 
-from PyQt5.QtCore import QCoreApplication, QStandardPaths
-from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QApplication, QWidget, QScrollArea, QFrame
+from PyQt6.QtCore import QCoreApplication, QStandardPaths
+from PyQt6.QtGui import QPalette
+from PyQt6.QtWidgets import QApplication, QWidget, QScrollArea, QFrame
 
 from hidproxy import hid
 from keycodes.keycodes import Keycode
@@ -146,7 +146,7 @@ def pad_for_vibl(msg):
 
 def init_logger():
     logging.basicConfig(level=logging.INFO)
-    directory = QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)
+    directory = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
     path = os.path.join(directory, "vial.log")
     handler = RotatingFileHandler(path, maxBytes=5 * 1024 * 1024, backupCount=5)
@@ -159,7 +159,7 @@ def make_scrollable(layout):
     w.setLayout(layout)
     w.setObjectName("w")
     scroll = QScrollArea()
-    scroll.setFrameShape(QFrame.NoFrame)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
     scroll.setStyleSheet("QScrollArea { background-color:transparent; }")
     w.setStyleSheet("#w { background-color:transparent; }")
     scroll.setWidgetResizable(True)
@@ -201,11 +201,11 @@ class KeycodeDisplay:
         widget.setMaskText(mask_text)
         widget.setToolTip(tooltip)
         if cls.code_is_overriden(code):
-            widget.setColor(QApplication.palette().color(QPalette.Link))
+            widget.setColor(QApplication.palette().color(QPalette.ColorRole.Link))
         else:
             widget.setColor(None)
         if inner and mask and cls.code_is_overriden(inner.qmk_id):
-            widget.setMaskColor(QApplication.palette().color(QPalette.Link))
+            widget.setMaskColor(QApplication.palette().color(QPalette.ColorRole.Link))
         else:
             widget.setMaskColor(None)
 
@@ -230,7 +230,7 @@ class KeycodeDisplay:
             qmk_id = widget.keycode.qmk_id
             if qmk_id in KeycodeDisplay.keymap_override:
                 label = KeycodeDisplay.keymap_override[qmk_id]
-                highlight_color = QApplication.palette().color(QPalette.Link).getRgb()
+                highlight_color = QApplication.palette().color(QPalette.ColorRole.Link).getRgb()
                 widget.setStyleSheet("QPushButton {color: rgb%s;}" % str(highlight_color))
             else:
                 label = widget.keycode.label

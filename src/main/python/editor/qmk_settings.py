@@ -2,9 +2,9 @@
 import json
 from collections import defaultdict
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal, QObject
-from PyQt5.QtWidgets import QVBoxLayout, QCheckBox, QGridLayout, QLabel, QWidget, QSizePolicy, QTabWidget, QSpinBox, \
+from PyQt6 import QtCore
+from PyQt6.QtCore import pyqtSignal, QObject
+from PyQt6.QtWidgets import QVBoxLayout, QCheckBox, QGridLayout, QLabel, QWidget, QSizePolicy, QTabWidget, QSpinBox, \
     QHBoxLayout, QPushButton, QMessageBox
 
 from editor.basic_editor import BasicEditor
@@ -160,12 +160,12 @@ class QmkSettings(BasicEditor):
                 continue
 
             w = QWidget()
-            w.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            w.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
             container = QGridLayout()
             w.setLayout(container)
             l = QVBoxLayout()
             l.addWidget(w)
-            l.setAlignment(w, QtCore.Qt.AlignHCenter)
+            l.setAlignment(w, QtCore.Qt.AlignmentFlag.AlignHCenter)
             w2 = QWidget()
             w2.setLayout(l)
             self.misc_widgets += [w, w2]
@@ -223,7 +223,7 @@ class QmkSettings(BasicEditor):
     def reset_settings(self):
         if QMessageBox.question(self.widget(), "",
                                 tr("QmkSettings", "Reset all settings to default values?"),
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.keyboard.qmk_settings_reset()
             self.reload_settings()
 

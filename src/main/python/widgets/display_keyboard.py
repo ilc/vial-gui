@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import json
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QGridLayout, QWidget, QSizePolicy
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QGridLayout, QWidget, QSizePolicy
 
 from constants import KEYCODE_BTN_RATIO
 from keycodes.keycodes import Keycode
@@ -19,14 +19,14 @@ class DisplayKeyboard(QWidget):
         super().__init__()
 
         self.layout = QGridLayout()
-        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.buttons = []
 
         keymap = KleSerial().deserialize(json.loads(kbdef))
         for key in keymap.keys:
             kc = Keycode.find_by_qmk_id(key.labels[0])
             btn = SquareButton()
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             btn.setRelSize(KEYCODE_BTN_RATIO)
             btn.setContentsMargins(0, 0, 0, 0)
             btn.setToolTip(Keycode.tooltip(kc.qmk_id))

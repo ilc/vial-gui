@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtWidgets import QPushButton, QLabel, QHBoxLayout
 
 class SquareButton(QPushButton):
 
@@ -33,10 +33,10 @@ class SquareButton(QPushButton):
             if self.label is None:
                 self.label = QLabel(text, self)
                 self.label.setWordWrap(True)
-                self.label.setAlignment(Qt.AlignCenter)
+                self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 layout = QHBoxLayout(self)
                 layout.setContentsMargins(0, 0, 0, 0)
-                layout.addWidget(self.label,0,Qt.AlignCenter)
+                layout.addWidget(self.label,0,Qt.AlignmentFlag.AlignCenter)
             else:
                 self.label.setText(text)
         else:

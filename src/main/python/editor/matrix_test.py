@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-from PyQt5.QtWidgets import QVBoxLayout, QPushButton, QWidget, QHBoxLayout, QLabel
-from PyQt5.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QHBoxLayout, QLabel
+from PyQt6.QtCore import Qt, QTimer
 
 import math
 
@@ -27,7 +27,7 @@ class MatrixTest(BasicEditor):
 
         layout = QVBoxLayout()
         layout.addWidget(self.keyboardWidget)
-        layout.setAlignment(self.keyboardWidget, Qt.AlignCenter)
+        layout.setAlignment(self.keyboardWidget, Qt.AlignmentFlag.AlignCenter)
 
         self.addLayout(layout)
 

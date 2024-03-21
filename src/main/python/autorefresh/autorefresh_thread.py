@@ -11,7 +11,7 @@ if sys.platform == "emscripten":
 else:
     from multiprocessing import RLock
 
-from PyQt5.QtCore import pyqtSignal, QThread
+from PyQt6.QtCore import pyqtSignal, QThread
 
 from util import find_vial_devices
 

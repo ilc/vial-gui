@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QLabel, QCheckBox, QComboBox, QGridLayout, QWidget, QSizePolicy
+from PyQt6 import QtCore
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QLabel, QCheckBox, QComboBox, QGridLayout, QWidget, QSizePolicy
 
 from editor.basic_editor import BasicEditor
 from widgets.keyboard_widget import KeyboardWidget
@@ -99,14 +99,14 @@ class LayoutEditor(BasicEditor):
         self.keyboard_preview.set_enabled(False)
         self.keyboard_preview.set_scale(0.7)
         self.addWidget(self.keyboard_preview)
-        self.setAlignment(self.keyboard_preview, QtCore.Qt.AlignHCenter)
+        self.setAlignment(self.keyboard_preview, QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         w = QWidget()
-        w.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        w.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.container = QGridLayout()
         w.setLayout(self.container)
         self.addWidget(w)
-        self.setAlignment(w, QtCore.Qt.AlignHCenter)
+        self.setAlignment(w, QtCore.Qt.AlignmentFlag.AlignHCenter)
         self.addStretch()
 
     def update_preview(self):

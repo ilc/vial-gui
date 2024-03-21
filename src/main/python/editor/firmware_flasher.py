@@ -7,9 +7,9 @@ import time
 import threading
 import sys
 
-from PyQt5.QtCore import pyqtSignal, QCoreApplication
-from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QToolButton, QPlainTextEdit, QProgressBar, QFileDialog, QDialog, \
+from PyQt6.QtCore import pyqtSignal, QCoreApplication
+from PyQt6.QtGui import QFontDatabase
+from PyQt6.QtWidgets import QHBoxLayout, QLineEdit, QToolButton, QPlainTextEdit, QProgressBar, QFileDialog, QDialog, \
     QCheckBox
 
 from editor.basic_editor import BasicEditor
@@ -129,7 +129,7 @@ class FirmwareFlasher(BasicEditor):
         self.addLayout(file_selector)
         self.txt_logger = QPlainTextEdit()
         self.txt_logger.setReadOnly(True)
-        self.txt_logger.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        self.txt_logger.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
         self.addWidget(self.txt_logger)
         progress_flash = QHBoxLayout()
         self.progress_bar = QProgressBar()
@@ -179,9 +179,9 @@ class FirmwareFlasher(BasicEditor):
     def on_click_select_file(self):
         dialog = QFileDialog()
         dialog.setDefaultSuffix("vfw")
-        dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         dialog.setNameFilters(["Vial Firmware (*.vfw)"])
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.selected_firmware_path = dialog.selectedFiles()[0]
             self.txt_file_selector.setText(self.selected_firmware_path)
             self.log("Firmware update package: {}".format(self.selected_firmware_path))
