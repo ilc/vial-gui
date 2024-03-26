@@ -1,4 +1,5 @@
 altgraph
+certifi
 future
 #git+https://github.com/vial-kb/cython-hidapi@88d8983b3dc65b9ef84238abe3f46004b0ef2fd0#egg=hidapi
 hidapi
@@ -9,6 +10,6 @@ PyQt6
 #PyInstaller==3.4
 simpleeval
 sip
-pywin32; sys_platform == 'win32'
+pywin32==304; platform_system == 'Windows'
 pyqtdarktheme
 qt-material

@@ -2,6 +2,7 @@
 import logging
 import platform
 from json import JSONDecodeError
+from struct import pack, unpack
 
 from PyQt6.QtCore import Qt, QSettings, QStandardPaths, QTimer, QRect, QT_VERSION_STR
 from PyQt6.QtWidgets import QWidget, QComboBox, QToolButton, QHBoxLayout, QVBoxLayout, QMainWindow, \
@@ -146,9 +147,19 @@ class MainWindow(QMainWindow):
         # make sure initial state is valid
         self.on_click_refresh()
 
+        self.startTimer(10)
+
         if sys.platform == "emscripten":
             import vialglue
             QTimer.singleShot(100, vialglue.notify_ready)
+
+    def timerEvent(self,_):
+        if isinstance(self.autorefresh.current_device, VialKeyboard):
+            message = pack("BB", 0xFE, 0xFE)
+            recv_message = self.autorefresh.current_device.keyboard.usb_send(
+                self.autorefresh.current_device.keyboard.dev, message)
+            layers = unpack('h', recv_message[0:2])
+            print(layers)
 
     def init_menu(self):
         layout_load_act = QAction(tr("MenuFile", "Load saved layout..."), self)
