@@ -1,5 +1,5 @@
 from keycodes.keycodes import Keycode
-from keymap import brazilian, canadian_csa, colemak, danish, eurkey, french, german, hebrew, hungarian, italian, japanese, latam, norwegian, russian, slovak, spanish, swedish, swedish_swerty, swiss, turkish, croatian
+from keymap import brazilian, canadian_csa, colemak, danish, dvorak, eurkey, french, german, hebrew, hungarian, italian, japanese, latam, norwegian, portuguese, russian, slovak, spanish, swedish, swedish_swerty, swiss, turkish, ukrainian, croatian, us_international
 
 KEYMAPS = [
     ("QWERTY", dict()),
@@ -8,6 +8,7 @@ KEYMAPS = [
     ("Colemak", colemak.keymap),
     ("Croatian (QWERTZ)", croatian.keymap),
     ("Danish (QWERTY)", danish.keymap),
+    ("Dvorak", dvorak.keymap),
     ("EurKey (QWERTY)", eurkey.keymap),
     ("French (AZERTY)", french.keymap),
     ("French (MAC)", french.keymap_mac),
@@ -18,13 +19,17 @@ KEYMAPS = [
     ("Japanese (QWERTY)", japanese.keymap),
     ("Latin American (QWERTY)", latam.keymap),
     ("Norwegian (QWERTY)", norwegian.keymap),
+    ("Portuguese (QWERTY)", portuguese.keymap),
     ("Russian (ЙЦУКЕН)", russian.keymap),
     ("Slovak (QWERTY)", slovak.keymap),
     ("Spanish (QWERTY)", spanish.keymap),
+    ("Spanish (Dvorak)", spanish.keymap_dvorak),
     ("Swedish (QWERTY)", swedish.keymap),
     ("Swedish (SWERTY)", swedish_swerty.keymap),
     ("Swiss (QWERTZ)", swiss.keymap),
-    ("Turkish (QWERTY)", turkish.keymap)
+    ("Turkish (QWERTY)", turkish.keymap),
+    ("Ukrainian (ЙЦУКЕН)", ukrainian.keymap),
+    ("US - International (QWERTY)", us_international.keymap),
 ]
 
 # make sure that qmk IDs we used are all correct
