@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  build-linux:
+  build-web-
     runs-on: ubuntu-22.04
 
     container:
