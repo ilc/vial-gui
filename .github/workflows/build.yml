@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [master, main, nuitka]
+    branches: [master, main, nuitka, sval-gui]
   pull_request:
   workflow_dispatch:
 
@@ -10,6 +10,39 @@ env:
   QT_API: pyside6
 
 jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libusb-1.0-0-dev libudev-dev \
+          libxcb-cursor0 libxcb-icccm4 libxcb-util1 libxcb-image0 \
+          libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-render0 \
+          libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 \
+          libxcb1 libxcb-glx0 libxkbcommon0 libxkbcommon-x11-0 \
+          libx11-6 libx11-xcb1 libxau6 libxdmcp6 \
+          libglib2.0-0 libegl1 libgl1
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Run tests
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: pytest src/main/python/test/ -v
+      env:
+        QT_QPA_PLATFORM: xcb
+
   build-windows:
     runs-on: windows-latest
 
