@@ -152,6 +152,8 @@ class TapDanceEntryUI(QObject):
 
 class TapDance(BasicEditor):
 
+    CM_KEY_TYPE = 'tap_dance'
+
     def __init__(self):
         super().__init__()
         self.keyboard = None
@@ -277,23 +279,11 @@ class TapDance(BasicEditor):
         super().rebuild(device)
         if self.valid():
             self.keyboard = device.keyboard
-            # Connect to ChangeManager for undo/redo refresh
-            cm = ChangeManager.instance()
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
-                pass
-            cm.values_restored.connect(self._on_values_restored)
             self.rebuild_ui()
 
-    def _on_values_restored(self, affected_keys):
-        """Refresh UI when tap dance values are restored by undo/redo."""
-        for key in affected_keys:
-            if key[0] == 'tap_dance':
-                _, idx = key
-                if idx < len(self.tap_dance_entries):
-                    self.tap_dance_entries[idx].load(self.keyboard.tap_dance_get(idx))
-        self.refresh_display()
+    def _reload_entry(self, idx):
+        if idx < len(self.tap_dance_entries):
+            self.tap_dance_entries[idx].load(self.keyboard.tap_dance_get(idx))
 
     def valid(self):
         return isinstance(self.device, VialKeyboard) and \

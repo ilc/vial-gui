@@ -132,6 +132,8 @@ class ComboEntryUI(QObject):
 
 class Combos(BasicEditor):
 
+    CM_KEY_TYPE = 'combo'
+
     def __init__(self):
         super().__init__()
         self.keyboard = None
@@ -259,23 +261,11 @@ class Combos(BasicEditor):
         super().rebuild(device)
         if self.valid():
             self.keyboard = device.keyboard
-            # Connect to ChangeManager for undo/redo refresh
-            cm = ChangeManager.instance()
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
-                pass
-            cm.values_restored.connect(self._on_values_restored)
             self.rebuild_ui()
 
-    def _on_values_restored(self, affected_keys):
-        """Refresh UI when combo values are restored by undo/redo."""
-        for key in affected_keys:
-            if key[0] == 'combo':
-                _, idx = key
-                if idx < len(self.combo_entries):
-                    self.combo_entries[idx].load(self.keyboard.combo_get(idx))
-        self.refresh_display()
+    def _reload_entry(self, idx):
+        if idx < len(self.combo_entries):
+            self.combo_entries[idx].load(self.keyboard.combo_get(idx))
 
     def valid(self):
         return isinstance(self.device, VialKeyboard) and \

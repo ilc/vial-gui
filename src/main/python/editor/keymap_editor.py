@@ -170,19 +170,13 @@ class KeymapEditor(BasicEditor):
         if self.valid():
             self.keyboard = device.keyboard
 
-            # Connect to ChangeManager for undo/redo refresh
+            # Also connect to 'changed' for layer button updates
             cm = ChangeManager.instance()
-            # Disconnect first to avoid duplicate connections
             try:
                 cm.changed.disconnect(self.on_change_manager_changed)
             except TypeError:
-                pass  # Not connected yet
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
                 pass
             cm.changed.connect(self.on_change_manager_changed)
-            cm.values_restored.connect(self._on_values_restored)
 
             # get number of layers
             self.rebuild_layers()

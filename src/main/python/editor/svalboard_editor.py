@@ -9,12 +9,13 @@ from qtpy.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
 
 from change_manager import ChangeManager, SvalboardSettingChange, SvalboardLayerColorChange
 from editor.basic_editor import BasicEditor
+from editor.settings_highlight_mixin import SettingsHighlightMixin
 from widgets.clickable_label import ClickableLabel
 from util import tr
 from vial_device import VialKeyboard
 
 
-class SvalboardEditor(BasicEditor):
+class SvalboardEditor(SettingsHighlightMixin, BasicEditor):
 
     def __init__(self):
         super().__init__()
@@ -221,18 +222,6 @@ class SvalboardEditor(BasicEditor):
         super().rebuild(device)
         if self.valid():
             self.keyboard = device.keyboard
-            # Connect to ChangeManager signals for undo/redo
-            cm = ChangeManager.instance()
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
-                pass
-            try:
-                cm.saved.disconnect(self._on_saved)
-            except TypeError:
-                pass
-            cm.values_restored.connect(self._on_values_restored)
-            cm.saved.connect(self._on_saved)
             self._update_layer_visibility()
             self._update_dpi_dropdowns()
             self._update_mh_timeout_dropdown()
@@ -440,10 +429,7 @@ class SvalboardEditor(BasicEditor):
         for i in range(len(self.layer_color_widgets)):
             is_modified = cm.is_modified(('svalboard_layer_color', i))
             frame, color_btn, label = self.layer_color_widgets[i]
-            if is_modified:
-                frame.setStyleSheet("#layer_color_frame { border: 2px solid palette(link); }")
-            else:
-                frame.setStyleSheet("#layer_color_frame { border: 2px solid transparent; }")
+            self.set_modified_style(frame, is_modified, "layer_color_frame")
 
         # Highlight individual changed settings widgets
         self._update_settings_highlights()
@@ -453,32 +439,24 @@ class SvalboardEditor(BasicEditor):
         if not self.pending_settings:
             return
 
-        frame_highlight = "#setting_frame { border: 2px solid palette(link); }"
-        frame_normal = "#setting_frame { border: 2px solid transparent; }"
-        checkbox_highlight = "border: 2px solid palette(link);"
-        checkbox_normal = "border: 2px solid transparent;"
-
         cm = ChangeManager.instance()
 
-        # Map settings keys to (widget_or_frame, is_frame)
+        # Map settings keys to (widget, object_name or None for direct style)
         widget_map = {
-            'left_dpi_index': (self.left_dpi_frame, True),
-            'right_dpi_index': (self.right_dpi_frame, True),
-            'left_scroll': (self.left_scroll, False),
-            'right_scroll': (self.right_scroll, False),
-            'axis_scroll_lock': (self.axis_scroll_lock, False),
-            'natural_scroll': (self.natural_scroll, False),
-            'auto_mouse': (self.auto_mouse, False),
-            'mh_timer_index': (self.mh_timeout_frame, True),
-            'turbo_scan': (self.turbo_scan_frame, True),
+            'left_dpi_index': (self.left_dpi_frame, "setting_frame"),
+            'right_dpi_index': (self.right_dpi_frame, "setting_frame"),
+            'left_scroll': (self.left_scroll, None),
+            'right_scroll': (self.right_scroll, None),
+            'axis_scroll_lock': (self.axis_scroll_lock, None),
+            'natural_scroll': (self.natural_scroll, None),
+            'auto_mouse': (self.auto_mouse, None),
+            'mh_timer_index': (self.mh_timeout_frame, "setting_frame"),
+            'turbo_scan': (self.turbo_scan_frame, "setting_frame"),
         }
 
-        # cm.is_modified() returns False in auto_commit mode
-        for setting_name, (widget, is_frame) in widget_map.items():
-            if cm.is_modified(('svalboard', setting_name)):
-                widget.setStyleSheet(frame_highlight if is_frame else checkbox_highlight)
-            else:
-                widget.setStyleSheet(frame_normal if is_frame else checkbox_normal)
+        for setting_name, (widget, object_name) in widget_map.items():
+            is_modified = cm.is_modified(('svalboard', setting_name))
+            self.set_modified_style(widget, is_modified, object_name)
 
     def save_state(self):
         """Return current state as a dict for saving to file"""

@@ -68,19 +68,6 @@ class MacroRecorder(BasicEditor):
             return
         self.keyboard = self.device.keyboard
 
-        # Connect to ChangeManager signals
-        cm = ChangeManager.instance()
-        try:
-            cm.values_restored.disconnect(self._on_values_restored)
-        except TypeError:
-            pass
-        try:
-            cm.saved.disconnect(self._on_saved)
-        except TypeError:
-            pass
-        cm.values_restored.connect(self._on_values_restored)
-        cm.saved.connect(self._on_saved)
-
         for x in range(self.keyboard.macro_count - len(self.macro_tab_w)):
             tab = MacroTab(self, self.recorder is not None)
             tab.changed.connect(self.on_change)

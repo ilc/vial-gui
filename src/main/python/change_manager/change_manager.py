@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """ChangeManager singleton for tracking uncommitted changes with undo/redo."""
+import copy
 from typing import Dict, List, Tuple, Optional, Any
 from qtpy.QtCore import QObject, Signal
 
@@ -15,6 +16,7 @@ class KeyboardState:
 
     def __init__(self):
         self.pending: Dict[Tuple, Change] = {}
+        self.committed: Dict[Tuple, Any] = {}  # key -> value currently on device
         self.undo_stack: List[ChangeGroup] = []
         self.redo_stack: List[ChangeGroup] = []
         self.current_group: Optional[ChangeGroup] = None
@@ -89,6 +91,7 @@ class ChangeManager(QObject):
         state = self._get_state()
         if state:
             state.pending.clear()
+            state.committed.clear()
             state.undo_stack.clear()
             state.redo_stack.clear()
             state.current_group = None
@@ -218,9 +221,23 @@ class ChangeManager(QObject):
                 if earlier_value is not None:
                     if key in state.pending:
                         state.pending[key].new_value = earlier_value
+                    elif key in state.committed:
+                        # Undoing to an earlier value, but device has committed value
+                        reverted = copy.copy(change)
+                        reverted.old_value = state.committed[key]
+                        reverted.new_value = earlier_value
+                        state.pending[key] = reverted
                 else:
+                    # No earlier value - reverting to original state
                     if key in state.pending:
                         del state.pending[key]
+                    elif key in state.committed:
+                        # Device has committed value, we're reverting to original
+                        # Need to track this as a pending change
+                        reverted = copy.copy(change)
+                        reverted.old_value = state.committed[key]
+                        reverted.new_value = change.old_value
+                        state.pending[key] = reverted
 
         self._emit_state_changes()
         self.values_restored.emit(affected_keys)
@@ -327,7 +344,12 @@ class ChangeManager(QObject):
 
             # Re-add to pending (only if not auto_commit)
             if not state.auto_commit:
-                if key in state.pending:
+                # Check if we're redoing back to committed value
+                if key in state.committed and state.committed[key] == change.new_value:
+                    # Local now matches device, remove from pending
+                    if key in state.pending:
+                        del state.pending[key]
+                elif key in state.pending:
                     state.pending[key].merge(change)
                 else:
                     state.pending[key] = change
@@ -354,6 +376,9 @@ class ChangeManager(QObject):
                 success = False
 
         if success:
+            # Record what was committed to device
+            for key, change in state.pending.items():
+                state.committed[key] = change.new_value
             state.pending.clear()
             self._emit_state_changes()
             self.saved.emit()
@@ -385,6 +410,7 @@ class ChangeManager(QObject):
 
         # Clear all state
         state.pending.clear()
+        state.committed.clear()
         state.undo_stack.clear()
         state.redo_stack.clear()
 

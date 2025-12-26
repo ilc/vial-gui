@@ -8,6 +8,7 @@ from qtpy.QtWidgets import QVBoxLayout, QCheckBox, QGridLayout, QHBoxLayout, QLa
 
 from change_manager import ChangeManager, QmkSettingChange, QmkBitChange
 from editor.basic_editor import BasicEditor
+from editor.settings_highlight_mixin import SettingsHighlightMixin
 from protocol.constants import VIAL_PROTOCOL_QMK_SETTINGS
 from vial_device import VialKeyboard
 
@@ -115,7 +116,7 @@ class IntegerOption(GenericOption):
             self.frame.setStyleSheet("#option_frame { border: 2px solid transparent; }")
 
 
-class QmkSettings(BasicEditor):
+class QmkSettings(SettingsHighlightMixin, BasicEditor):
 
     def __init__(self):
         super().__init__()
@@ -260,18 +261,6 @@ class QmkSettings(BasicEditor):
         super().rebuild(device)
         if self.valid():
             self.keyboard = device.keyboard
-            # Connect to ChangeManager signals
-            cm = ChangeManager.instance()
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
-                pass
-            try:
-                cm.saved.disconnect(self._on_saved)
-            except TypeError:
-                pass
-            cm.values_restored.connect(self._on_values_restored)
-            cm.saved.connect(self._on_saved)
             self.reload_settings()
 
     def _on_values_restored(self, affected_keys):

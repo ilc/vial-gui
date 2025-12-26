@@ -236,6 +236,8 @@ class AltRepeatKeyEntryUI(QObject):
 
 class AltRepeatKey(BasicEditor):
 
+    CM_KEY_TYPE = 'alt_repeat_key'
+
     def __init__(self):
         super().__init__()
         self.keyboard = None
@@ -360,23 +362,11 @@ class AltRepeatKey(BasicEditor):
         super().rebuild(device)
         if self.valid():
             self.keyboard = device.keyboard
-            # Connect to ChangeManager for undo/redo refresh
-            cm = ChangeManager.instance()
-            try:
-                cm.values_restored.disconnect(self._on_values_restored)
-            except TypeError:
-                pass
-            cm.values_restored.connect(self._on_values_restored)
             self.rebuild_ui()
 
-    def _on_values_restored(self, affected_keys):
-        """Refresh UI when alt repeat key values are restored by undo/redo."""
-        for key in affected_keys:
-            if key[0] == 'alt_repeat_key':
-                _, idx = key
-                if idx < len(self.entries):
-                    self.entries[idx].load(self.keyboard.alt_repeat_key_get(idx))
-        self.refresh_display()
+    def _reload_entry(self, idx):
+        if idx < len(self.entries):
+            self.entries[idx].load(self.keyboard.alt_repeat_key_get(idx))
 
     def valid(self):
         return isinstance(self.device, VialKeyboard) and \
