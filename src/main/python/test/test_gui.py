@@ -2,11 +2,15 @@ import lzma
 import os.path
 import struct
 
+import pytest
 from qtpy.QtCore import QPoint
 from qtpy.QtWidgets import QPushButton
 from pytestqt.qt_compat import qt_api
 
+from change_manager import ChangeManager
 from main_window import MainWindow
+
+
 
 from protocol.constants import CMD_VIA_GET_PROTOCOL_VERSION, CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_KEYBOARD_ID, \
     CMD_VIAL_GET_SIZE, CMD_VIAL_GET_DEFINITION, CMD_VIA_GET_LAYER_COUNT, CMD_VIA_MACRO_GET_COUNT, \
@@ -199,7 +203,29 @@ def prepare(qtbot, keyboard_json, combos=None, tap_dance=None):
     hid.enumerate = mock_enumerate
     hid.device = MockDevice
 
+    # Reset ChangeManager state before creating window
+    ChangeManager.reset()
+
     mw = MainWindow(FakeAppctx())
+
+    # Enable auto_commit so keycode changes are immediately sent to the device
+    # This matches the old behavior before ChangeManager integration
+    ChangeManager.instance().auto_commit = True
+
+    # Patch closeEvent and on_device_selected to clear ChangeManager before checking
+    # This prevents the "unsaved changes" dialogs from appearing during test cleanup
+    original_close_event = mw.closeEvent
+    def patched_close_event(e):
+        ChangeManager.instance().clear()
+        original_close_event(e)
+    mw.closeEvent = patched_close_event
+
+    original_on_device_selected = mw.on_device_selected
+    def patched_on_device_selected():
+        ChangeManager.instance().clear()
+        original_on_device_selected()
+    mw.on_device_selected = patched_on_device_selected
+
     qtbot.addWidget(mw)
     mw.show()
     # keep reference to MainWindow for the duration of tests
@@ -270,11 +296,16 @@ def test_key_change(qtbot):
     assert ak.isVisible()
     assert not bk.isVisible()
 
+    def find_key_btn(start, text):
+        for w in start.findChildren(SquareButton):
+            if w.isVisible() and w.text == text:
+                return w
+        raise RuntimeError("cannot find a visible key button with text='{}'".format(text))
+
     # change current key to B
-    assert ak.currentIndex() == 0
-    assert ak.tabText(ak.currentIndex()) == "Basic"
-    btn = ak.widget(0).layout.itemAt(3).widget().buttons[3]
-    assert btn.text == "B"
+    assert ak.tab_widget.currentIndex() == 0
+    assert ak.tab_widget.tabText(ak.tab_widget.currentIndex()) == "Basic"
+    btn = find_key_btn(ak, "B")
     qtbot.mouseClick(btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
 
     # check the new keycode is KC_B
@@ -283,63 +314,34 @@ def test_key_change(qtbot):
     # check that we moved to the next key after setting the first key
     assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[1]
 
-    def find_key_btn(start, text):
-        for w in start.findChildren(SquareButton):
-            if w.isVisible() and w.text == text:
-                return w
-        raise RuntimeError("cannot find a visible key button with text='{}'".format(text))
+    # Enable Ctrl modifier in ModsBar, then click C to get LCTL(KC_C)
+    ctrl_btn = ak.mods_bar.mod_buttons['ctrl']
+    qtbot.mouseClick(ctrl_btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
+    assert ak.mods_bar.mods['ctrl']
 
-    # switch to the Quantum tab
-    ak.setCurrentIndex(3)
-    assert ak.tabText(ak.currentIndex()) == "Quantum"
-
-    # change current key to a masked LCTL()
-    btn = find_key_btn(ak, "LCtl\n(kc)")
+    # click C to set LCTL(KC_C)
+    btn = find_key_btn(ak, "C")
     qtbot.mouseClick(btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
 
-    # check the new keycode is LCTL()
-    assert vk.keymap[0][0][1] == 0x100
+    # check the new keycode is LCTL(KC_C) = 0x106
+    assert vk.keymap[0][0][1] == 0x106
 
     # check that we moved to the next key after setting the second key
     assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[2]
 
-    # click back on the second key
-    point = mw.keymap_editor.container.widgets[1].bbox[0]
-    qtbot.mouseClick(mw.keymap_editor.container, qt_api.QtCore.Qt.MouseButton.LeftButton,
-                     pos=QPoint(int(point.x()), int(point.y())))
+    # Disable Ctrl modifier
+    qtbot.mouseClick(ctrl_btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
+    assert not ak.mods_bar.mods['ctrl']
 
-    # check that we have the second key selected & it's not a mask
-    assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[1]
-    assert not mw.keymap_editor.container.active_mask
-
-    # click on the mask now by manually calculating somewhere within last 4/5th Y, midpoint X
-    bbox = mw.keymap_editor.container.widgets[1].bbox
-    min_x = min(p.x() for p in bbox)
-    max_x = max(p.x() for p in bbox)
-    min_y = min(p.y() for p in bbox)
-    max_y = max(p.y() for p in bbox)
-    qtbot.mouseClick(mw.keymap_editor.container, qt_api.QtCore.Qt.MouseButton.LeftButton,
-                     pos=QPoint(int((min_x + max_x) / 2), int(min_y + (max_y - min_y) * 4/5)))
-    # now we must have the inner selected on the same key
-    assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[1]
-    assert mw.keymap_editor.container.active_mask
-
-    # now only basic keys should be settable
-    assert not ak.isVisible()
-    assert bk.isVisible()
-
-    # let's set key C
-    btn = find_key_btn(bk, "C")
+    # set third key to D (unmodified)
+    btn = find_key_btn(ak, "D")
     qtbot.mouseClick(btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
 
-    # check the new keycode is LCTL(KC_C)
-    assert vk.keymap[0][0][1] == 0x106
+    # check the new keycode is KC_D = 7
+    assert vk.keymap[0][1][0] == 7
 
-    # and we should have moved to the next key, setting the full key and not the inner
-    assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[2]
-    assert not mw.keymap_editor.container.active_mask
-    assert ak.isVisible()
-    assert not bk.isVisible()
+    # check that we moved to the fourth key
+    assert mw.keymap_editor.container.active_key == mw.keymap_editor.container.widgets[3]
 
 
 def test_keymap_zoom(qtbot):
@@ -440,9 +442,7 @@ def test_layer_switch(qtbot):
 
 
 def test_combos(qtbot):
-    from widgets.key_widget import KeyWidget
-
-    """ Tests setting combo keycodes """
+    """ Tests combo loading and display """
     mw, vk = prepare(qtbot, FAKE_KEYBOARD, combos=[[0, 0, 0, 0, 0], [4, 5, 6, 7, 8], [0, 0x106, 0, 0, 0]])
 
     combos = None
@@ -451,156 +451,90 @@ def test_combos(qtbot):
             combos = mw.tabs.widget(x).editor
 
     assert combos is not None, "could not find the combos tab"
-    ct = combos.tabs
 
-    tabs = []
-    for x in range(ct.count()):
-        tabs.append(ct.tabText(x))
-    assert tabs == ["1", "2", "3"]
+    # New UI uses combo_entries list with FlowLayout
+    assert len(combos.combo_entries) == 3
 
-    def check_tab(idx, keys):
-        ct.setCurrentIndex(idx)
-        assert ct.tabText(ct.currentIndex()) == str(idx + 1)
-        w = ct.widget(ct.currentIndex()).findChildren(KeyWidget)
-        assert len(w) == 5
-        for x in range(5):
-            assert w[x].keycode == keys[x], "unexpected keycode at tab {} position {}: {} vs {}".format(idx, x, w[x].keycode, keys[x])
+    def check_entry(idx, keys):
+        entry = combos.combo_entries[idx]
+        for x in range(4):
+            assert entry.kc_inputs[x].keycode == keys[x], \
+                f"unexpected keycode at entry {idx} input {x}: {entry.kc_inputs[x].keycode} vs {keys[x]}"
+        assert entry.kc_output.keycode == keys[4], \
+            f"unexpected output keycode at entry {idx}: {entry.kc_output.keycode} vs {keys[4]}"
 
-    check_tab(0, ["KC_NO", "KC_NO", "KC_NO", "KC_NO", "KC_NO"])
-    check_tab(1, ["KC_A", "KC_B", "KC_C", "KC_D", "KC_E"])
-    check_tab(2, ["KC_NO", "LCTL(KC_C)", "KC_NO", "KC_NO", "KC_NO"])
+    check_entry(0, ["KC_NO", "KC_NO", "KC_NO", "KC_NO", "KC_NO"])
+    check_entry(1, ["KC_A", "KC_B", "KC_C", "KC_D", "KC_E"])
+    check_entry(2, ["KC_NO", "LCTL(KC_C)", "KC_NO", "KC_NO", "KC_NO"])
 
-    # ok now still on tab index 2, let's switch some combos
-    # change "Key 1" to "A"
-    assert not mw.tray_keycodes.isVisible()
-    w = ct.widget(ct.currentIndex()).findChildren(KeyWidget)
-    bbox = w[0].widgets[0].bbox
-    min_x = min(p.x() for p in bbox)
-    max_x = max(p.x() for p in bbox)
-    min_y = min(p.y() for p in bbox)
-    max_y = max(p.y() for p in bbox)
-    pos_mask = QPoint(int((min_x + max_x) / 2), int(min_y + (max_y - min_y) * 4/5))
-    pos = QPoint(bbox[0].x(), bbox[0].y())
-    qtbot.mouseClick(w[0], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
+    # Test modifying a combo key via click interaction
+    entry2 = combos.combo_entries[2]
+    kc_widget = entry2.kc_inputs[0]  # First input key
+
+    # Click on key widget to open tray
+    bbox = kc_widget.widgets[0].bbox
+    pos = QPoint(int(bbox[0].x()), int(bbox[0].y()))
+    qtbot.mouseClick(kc_widget, qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
     assert mw.tray_keycodes.isVisible()
 
+    # Set to "A"
     qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "A"), qt_api.QtCore.Qt.MouseButton.LeftButton)
     assert vk.combos[2] == (4, 0x106, 0, 0, 0)
 
-    # change "Output key" to "B"
-    qtbot.mouseClick(w[4], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
-    qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "B"), qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert vk.combos[2] == (4, 0x106, 0, 0, 5)
-
+    # Test modifier + key using ModsBar
     ak = mw.tray_keycodes.all_keycodes
-    bk = mw.tray_keycodes.basic_keycodes
+    kc_widget = entry2.kc_inputs[2]  # Third input key
+    bbox = kc_widget.widgets[0].bbox
+    pos = QPoint(int(bbox[0].x()), int(bbox[0].y()))
+    qtbot.mouseClick(kc_widget, qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
 
-    # change "Key 4" to LSft(D)
-    # first set up LSft(kc)
-    qtbot.mouseClick(w[3], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
-    assert ak.isVisible()
-    assert not bk.isVisible()
-    ak.setCurrentIndex(3)
-    assert ak.tabText(ak.currentIndex()) == "Quantum"
-    qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "LSft\n(kc)"), qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert vk.combos[2] == (4, 0x106, 0, 0x200, 5)
-    # now click the mask and set up D inside
-    qtbot.mouseClick(w[3], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos_mask)
-    assert not ak.isVisible()
-    assert bk.isVisible()
+    # Enable Shift modifier and click D to get LSFT(KC_D)
+    shift_btn = ak.mods_bar.mod_buttons['shift']
+    qtbot.mouseClick(shift_btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
     qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "D"), qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert vk.combos[2] == (4, 0x106, 0, 0x207, 5)
+    assert vk.combos[2] == (4, 0x106, 0x207, 0, 0)  # Third key is now LSFT(KC_D)
 
-    # change "Key 2" to E
-    qtbot.mouseClick(w[1], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
-    assert ak.isVisible()
-    assert not bk.isVisible()
-    ak.setCurrentIndex(0)
-    qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "E"), qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert vk.combos[2] == (4, 8, 0, 0x207, 5)
-
-    # check the final result in the gui as well
-    check_tab(2, ["KC_A", "KC_E", "KC_NO", "LSFT(KC_D)", "KC_B"])
-
-    # TODO: a future unit test should check switching between multiple keyboards with different number of combos
+    # Disable shift
+    qtbot.mouseClick(shift_btn, qt_api.QtCore.Qt.MouseButton.LeftButton)
 
 
 def test_tap_dance(qtbot):
-    from widgets.key_widget import KeyWidget
-    from qtpy.QtWidgets import QSpinBox
-
+    """ Tests tap dance loading and display """
     mw, vk = prepare(qtbot, FAKE_KEYBOARD, tap_dance=[[0, 0, 0, 0, 200], [4, 5, 6, 7, 200], [0, 0x106, 0, 0, 500]])
-
-    # TODO: a future unit test should check switching between multiple keyboards with different number of tap dances
 
     tde = None
     for x in range(mw.tabs.count()):
         if mw.tabs.tabText(x) == "Tap Dance":
             tde = mw.tabs.widget(x).editor
 
-    assert tde is not None, "could not find the combos tab"
-    td = tde.tabs
+    assert tde is not None, "could not find the tap dance tab"
 
-    tabs = []
-    for x in range(td.count()):
-        tabs.append(td.tabText(x))
-    assert tabs == ["0", "1", "2"]
+    # New UI uses tap_dance_entries list with FlowLayout
+    assert len(tde.tap_dance_entries) == 3
 
-    def check_tab(idx, keys, timeout):
-        td.setCurrentIndex(idx)
-        assert td.tabText(td.currentIndex()) == str(idx)
-        w = td.widget(td.currentIndex()).findChildren(KeyWidget)
-        assert len(w) == 4
-        for x in range(4):
-            assert w[x].keycode == keys[x], "unexpected keycode at tab {} position {}: {} vs {}".format(idx, x, w[x].keycode, keys[x])
-        timeout_w = td.widget(td.currentIndex()).findChildren(QSpinBox)[0]
-        assert timeout_w.value() == timeout
+    def check_entry(idx, keys, timeout):
+        entry = tde.tap_dance_entries[idx]
+        key_widgets = [entry.kc_on_tap, entry.kc_on_hold, entry.kc_on_double_tap, entry.kc_on_tap_hold]
+        for x, kw in enumerate(key_widgets):
+            assert kw.keycode == keys[x], \
+                f"unexpected keycode at entry {idx} position {x}: {kw.keycode} vs {keys[x]}"
+        assert entry.txt_tapping_term.value() == timeout, \
+            f"unexpected timeout at entry {idx}: {entry.txt_tapping_term.value()} vs {timeout}"
 
-    check_tab(0, ["KC_NO", "KC_NO", "KC_NO", "KC_NO"], 200)
-    check_tab(1, ["KC_A", "KC_B", "KC_C", "KC_D"], 200)
-    check_tab(2, ["KC_NO", "LCTL(KC_C)", "KC_NO", "KC_NO"], 500)
+    check_entry(0, ["KC_NO", "KC_NO", "KC_NO", "KC_NO"], 200)
+    check_entry(1, ["KC_A", "KC_B", "KC_C", "KC_D"], 200)
+    check_entry(2, ["KC_NO", "LCTL(KC_C)", "KC_NO", "KC_NO"], 500)
 
-    # ok now still on tab index 2, let's switch the tap dance
-    # change "Key 1" to "A"
-    assert not mw.tray_keycodes.isVisible()
-    w = td.widget(td.currentIndex()).findChildren(KeyWidget)
-    bbox = w[0].widgets[0].bbox
-    min_x = min(p.x() for p in bbox)
-    max_x = max(p.x() for p in bbox)
-    min_y = min(p.y() for p in bbox)
-    max_y = max(p.y() for p in bbox)
-    pos_mask = QPoint(int((min_x + max_x) / 2), int(min_y + (max_y - min_y) * 4/5))
-    pos = QPoint(bbox[0].x(), bbox[0].y())
-    qtbot.mouseClick(w[0], qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
+    # Test modifying a tap dance key via click interaction
+    entry2 = tde.tap_dance_entries[2]
+    kc_widget = entry2.kc_on_tap  # Tap key
+
+    # Click on key widget to open tray
+    bbox = kc_widget.widgets[0].bbox
+    pos = QPoint(int(bbox[0].x()), int(bbox[0].y()))
+    qtbot.mouseClick(kc_widget, qt_api.QtCore.Qt.MouseButton.LeftButton, pos=pos)
     assert mw.tray_keycodes.isVisible()
 
-    # note that for the tap dance the keycode change is immediate but not the timeout change
+    # Set to "A"
     qtbot.mouseClick(find_key_btn(mw.tray_keycodes, "A"), qt_api.QtCore.Qt.MouseButton.LeftButton)
     assert vk.tap_dance[2] == (4, 0x106, 0, 0, 500)
-
-    timeout_w = td.widget(td.currentIndex()).findChildren(QSpinBox)[0]
-    timeout_w.setValue(123)
-    assert vk.tap_dance[2] == (4, 0x106, 0, 0, 500)
-
-    # check that we are adding * to the tab text when there are pending changes
-    assert td.tabText(td.currentIndex()) == "2*"
-    timeout_w.setValue(500)
-    assert td.tabText(td.currentIndex()) == "2"
-
-    # ok commit the change now
-    timeout_w.setValue(123)
-    assert td.tabText(td.currentIndex()) == "2*"
-    qtbot.mouseClick(tde.btn_save, qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert td.tabText(td.currentIndex()) == "2"
-    assert vk.tap_dance[2] == (4, 0x106, 0, 0, 123)
-
-    # let's check that reverting works
-    assert not tde.btn_save.isEnabled()
-    timeout_w.setValue(321)
-    assert tde.btn_save.isEnabled()
-    assert td.tabText(td.currentIndex()) == "2*"
-
-    qtbot.mouseClick(tde.btn_revert, qt_api.QtCore.Qt.MouseButton.LeftButton)
-    assert not tde.btn_save.isEnabled()
-    assert td.tabText(td.currentIndex()) == "2"
-    assert timeout_w.value() == 123

@@ -64,6 +64,16 @@ def RSA_T(kc): return MT(r("MOD_RSFT") | r("MOD_RALT"), kc)
 def RCS_T(kc): return MT(r("MOD_RCTL") | r("MOD_RSFT"), kc)
 def LCG_T(kc): return MT(r("MOD_LCTL") | r("MOD_LGUI"), kc)
 def RCG_T(kc): return MT(r("MOD_RCTL") | r("MOD_RGUI"), kc)
+def LSCG_T(kc): return MT(r("MOD_LSFT") | r("MOD_LCTL") | r("MOD_LGUI"), kc)
+def LSAG_T(kc): return MT(r("MOD_LSFT") | r("MOD_LALT") | r("MOD_LGUI"), kc)
+def RSC_T(kc): return MT(r("MOD_RSFT") | r("MOD_RCTL"), kc)
+def RCA_T(kc): return MT(r("MOD_RCTL") | r("MOD_RALT"), kc)
+def RSG_T(kc): return MT(r("MOD_RSFT") | r("MOD_RGUI"), kc)
+def RSCG_T(kc): return MT(r("MOD_RSFT") | r("MOD_RCTL") | r("MOD_RGUI"), kc)
+def RAG_T(kc): return MT(r("MOD_RALT") | r("MOD_RGUI"), kc)
+def RSAG_T(kc): return MT(r("MOD_RSFT") | r("MOD_RALT") | r("MOD_RGUI"), kc)
+def RSCA_T(kc): return MT(r("MOD_RSFT") | r("MOD_RCTL") | r("MOD_RALT"), kc)
+def RSCAG_T(kc): return MT(r("MOD_RSFT") | r("MOD_RCTL") | r("MOD_RALT") | r("MOD_RGUI"), kc)
 
 
 functions = {
@@ -85,6 +95,8 @@ functions = {
     "LCA_T": LCA_T, "LSA_T": LSA_T, "LAG_T": LAG_T, "RSA_T": RSA_T, "RCS_T": RCS_T, "SAGR_T": RSA_T, "ALL_T": HYPR_T,
     "TD": TD,
     "LCG": LCG, "RCG": RCG, "LCG_T": LCG_T, "RCG_T": RCG_T,
+    "LSCG_T": LSCG_T, "LSAG_T": LSAG_T, "RSC_T": RSC_T, "RCA_T": RCA_T, "RSG_T": RSG_T,
+    "RSCG_T": RSCG_T, "RAG_T": RAG_T, "RSAG_T": RSAG_T, "RSCA_T": RSCA_T, "RSCAG_T": RSCAG_T,
 }
 
 for x in range(16):

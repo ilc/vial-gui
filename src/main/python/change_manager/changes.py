@@ -31,6 +31,17 @@ class Change(ABC):
         """
         pass
 
+    @abstractmethod
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        """Restore value in keyboard's local state (not device).
+
+        Used by undo/redo to update in-memory state.
+        Args:
+            keyboard: The keyboard object to update
+            use_old: If True, restore old_value; if False, restore new_value
+        """
+        pass
+
     def merge(self, other: 'Change') -> bool:
         """Merge another change into this one.
 
@@ -64,6 +75,10 @@ class KeymapChange(Change):
     def revert(self, keyboard) -> bool:
         return keyboard._commit_key(self.layer, self.row, self.col, self.old_value)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        keyboard.layout[(self.layer, self.row, self.col)] = value
+
     def __repr__(self):
         return f"KeymapChange(layer={self.layer}, row={self.row}, col={self.col}, {self.old_value}->{self.new_value})"
 
@@ -87,6 +102,10 @@ class EncoderChange(Change):
     def revert(self, keyboard) -> bool:
         return keyboard._commit_encoder(self.layer, self.index, self.direction, self.old_value)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        keyboard.encoder_layout[(self.layer, self.index, self.direction)] = value
+
     def __repr__(self):
         return f"EncoderChange(layer={self.layer}, idx={self.index}, dir={self.direction}, {self.old_value}->{self.new_value})"
 
@@ -107,6 +126,11 @@ class ComboChange(Change):
 
     def revert(self, keyboard) -> bool:
         return keyboard._commit_combo(self.index, self.old_value)
+
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'combo_entries') and self.index < len(keyboard.combo_entries):
+            keyboard.combo_entries[self.index] = value
 
     def __repr__(self):
         return f"ComboChange(index={self.index})"
@@ -129,6 +153,11 @@ class TapDanceChange(Change):
     def revert(self, keyboard) -> bool:
         return keyboard._commit_tap_dance(self.index, self.old_value)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'tap_dance_entries') and self.index < len(keyboard.tap_dance_entries):
+            keyboard.tap_dance_entries[self.index] = value
+
     def __repr__(self):
         return f"TapDanceChange(index={self.index})"
 
@@ -150,6 +179,11 @@ class KeyOverrideChange(Change):
     def revert(self, keyboard) -> bool:
         return keyboard._commit_key_override(self.index, self.old_value)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'key_override_entries') and self.index < len(keyboard.key_override_entries):
+            keyboard.key_override_entries[self.index] = value
+
     def __repr__(self):
         return f"KeyOverrideChange(index={self.index})"
 
@@ -170,6 +204,11 @@ class AltRepeatKeyChange(Change):
 
     def revert(self, keyboard) -> bool:
         return keyboard._commit_alt_repeat_key(self.index, self.old_value)
+
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'alt_repeat_key_entries') and self.index < len(keyboard.alt_repeat_key_entries):
+            keyboard.alt_repeat_key_entries[self.index] = value
 
     def __repr__(self):
         return f"AltRepeatKeyChange(index={self.index})"
@@ -204,6 +243,14 @@ class MacroChange(Change):
         data = b'\x00'.join(macros[:keyboard.macro_count]) + b'\x00'
         return keyboard._commit_macro(data)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        macros = keyboard.macro.split(b'\x00')
+        while len(macros) <= self.index:
+            macros.append(b'')
+        macros[self.index] = value
+        keyboard.macro = b'\x00'.join(macros[:keyboard.macro_count]) + b'\x00'
+
     def __repr__(self):
         return f"MacroChange(index={self.index}, {len(self.old_value)}->{len(self.new_value)} bytes)"
 
@@ -224,6 +271,11 @@ class QmkSettingChange(Change):
 
     def revert(self, keyboard) -> bool:
         return keyboard._commit_qmk_setting(self.qsid, self.old_value)
+
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'settings'):
+            keyboard.settings[self.qsid] = value
 
     def __repr__(self):
         return f"QmkSettingChange(qsid={self.qsid}, {self.old_value}->{self.new_value})"
@@ -259,6 +311,16 @@ class QmkBitChange(Change):
         keyboard.settings[self.qsid] = current
         return keyboard._commit_qmk_setting(self.qsid, current)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'settings'):
+            current = keyboard.settings.get(self.qsid, 0)
+            if value:
+                current |= (1 << self.bit)
+            else:
+                current &= ~(1 << self.bit)
+            keyboard.settings[self.qsid] = current
+
     def __repr__(self):
         return f"QmkBitChange(qsid={self.qsid}, bit={self.bit}, {self.old_value}->{self.new_value})"
 
@@ -285,6 +347,11 @@ class SvalboardSettingChange(Change):
         settings[self.setting_name] = self.old_value
         return keyboard._commit_svalboard_settings(settings)
 
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'sval_settings'):
+            keyboard.sval_settings[self.setting_name] = value
+
     def __repr__(self):
         return f"SvalboardSettingChange({self.setting_name}, {self.old_value}->{self.new_value})"
 
@@ -305,6 +372,11 @@ class SvalboardLayerColorChange(Change):
 
     def revert(self, keyboard) -> bool:
         return keyboard._commit_svalboard_layer_color(self.layer, self.old_value)
+
+    def restore_local(self, keyboard, use_old: bool) -> None:
+        value = self.old_value if use_old else self.new_value
+        if hasattr(keyboard, 'sval_layer_colors'):
+            keyboard.sval_layer_colors[self.layer] = value
 
     def merge(self, other: 'SvalboardLayerColorChange') -> bool:
         self.new_value = other.new_value

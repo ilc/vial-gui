@@ -71,6 +71,7 @@ class ChangeManager(QObject):
         self._prev_can_redo = False
         self._prev_can_save = False
         self._prev_auto_commit = False
+        self._prev_modified_keys: set = set()
 
     def _get_state(self) -> Optional[KeyboardState]:
         """Get state for current keyboard."""
@@ -156,13 +157,13 @@ class ChangeManager(QObject):
         else:
             state.pending[key] = change
 
-        # Handle grouping
+        # Handle grouping - copy change so undo stack isn't corrupted by later merges
         if state.current_group is not None:
-            state.current_group.add(change)
+            state.current_group.add(copy.copy(change))
         else:
             # Single change = its own group
             group = ChangeGroup("Change")
-            group.add(change)
+            group.add(copy.copy(change))
             self._push_to_undo_stack(group)
 
             # In auto_commit mode, immediately apply to device
@@ -208,114 +209,69 @@ class ChangeManager(QObject):
             affected_keys.add(key)
 
             # Restore old value in keyboard state
-            if self.keyboard is not None:
-                self._restore_value(change, use_old=True)
+            self._restore_value(change, use_old=True)
 
-                # In auto_commit mode, also update device
-                if state.auto_commit:
+            if state.auto_commit:
+                # In auto_commit mode, update device
+                if self.keyboard is not None:
                     change.revert(self.keyboard)
-
-            # Update pending: find what value should be pending now
-            if not state.auto_commit:
+            else:
+                # In normal mode, update pending tracking
                 earlier_value = self._find_earlier_value(key)
-                if earlier_value is not None:
-                    # Check if earlier value matches committed (no change needed)
-                    if key in state.committed and state.committed[key] == earlier_value:
-                        if key in state.pending:
-                            del state.pending[key]
-                    elif key in state.pending:
-                        state.pending[key].new_value = earlier_value
-                    elif key in state.committed:
-                        # Undoing to an earlier value, but device has committed value
-                        reverted = copy.copy(change)
-                        reverted.old_value = state.committed[key]
-                        reverted.new_value = earlier_value
-                        state.pending[key] = reverted
-                else:
-                    # No earlier value - reverting to original state
-                    if key in state.pending:
-                        del state.pending[key]
-                    elif key in state.committed:
-                        # Device has committed value, we're reverting to original
-                        # Need to track this as a pending change
-                        reverted = copy.copy(change)
-                        reverted.old_value = state.committed[key]
-                        reverted.new_value = change.old_value
-                        state.pending[key] = reverted
+                local_value = earlier_value if earlier_value is not None else change.old_value
+                self._update_pending(state, key, change, local_value)
 
         self._emit_state_changes()
         self.values_restored.emit(affected_keys)
         return True
 
     def _restore_value(self, change: Change, use_old: bool) -> None:
-        """Restore a value in the keyboard state."""
-        if self.keyboard is None:
-            return
+        """Restore a value in the keyboard state.
 
-        key = change.key()
-        value = change.old_value if use_old else change.new_value
-
-        if key[0] == 'keymap':
-            _, layer, row, col = key
-            self.keyboard.layout[(layer, row, col)] = value
-        elif key[0] == 'encoder':
-            _, layer, index, direction = key
-            self.keyboard.encoder_layout[(layer, index, direction)] = value
-        elif key[0] == 'macro':
-            _, index = key
-            macros = self.keyboard.macro.split(b'\x00')
-            while len(macros) <= index:
-                macros.append(b'')
-            macros[index] = value
-            self.keyboard.macro = b'\x00'.join(macros[:self.keyboard.macro_count]) + b'\x00'
-        elif key[0] == 'combo':
-            _, index = key
-            if hasattr(self.keyboard, 'combo_entries') and index < len(self.keyboard.combo_entries):
-                self.keyboard.combo_entries[index] = value
-        elif key[0] == 'tap_dance':
-            _, index = key
-            if hasattr(self.keyboard, 'tap_dance_entries') and index < len(self.keyboard.tap_dance_entries):
-                self.keyboard.tap_dance_entries[index] = value
-        elif key[0] == 'key_override':
-            _, index = key
-            if hasattr(self.keyboard, 'key_override_entries') and index < len(self.keyboard.key_override_entries):
-                self.keyboard.key_override_entries[index] = value
-        elif key[0] == 'alt_repeat_key':
-            _, index = key
-            if hasattr(self.keyboard, 'alt_repeat_key_entries') and index < len(self.keyboard.alt_repeat_key_entries):
-                self.keyboard.alt_repeat_key_entries[index] = value
-        elif key[0] == 'qmk_setting':
-            _, qsid = key
-            if hasattr(self.keyboard, 'settings'):
-                self.keyboard.settings[qsid] = value
-        elif key[0] == 'qmk_setting_bit':
-            _, qsid, bit = key
-            if hasattr(self.keyboard, 'settings'):
-                current = self.keyboard.settings.get(qsid, 0)
-                if value:  # value is 0 or 1
-                    current |= (1 << bit)
-                else:
-                    current &= ~(1 << bit)
-                self.keyboard.settings[qsid] = current
-        elif key[0] == 'svalboard':
-            _, setting_name = key
-            if hasattr(self.keyboard, 'sval_settings'):
-                self.keyboard.sval_settings[setting_name] = value
-        elif key[0] == 'svalboard_layer_color':
-            _, layer = key
-            if hasattr(self.keyboard, 'sval_layer_colors'):
-                self.keyboard.sval_layer_colors[layer] = value
+        Precondition: self.keyboard is not None (checked by caller).
+        """
+        change.restore_local(self.keyboard, use_old)
 
     def _find_earlier_value(self, key: Tuple) -> Optional[Any]:
-        """Find the value for this key from an earlier undo stack entry."""
+        """Find the value for this key from an earlier undo stack entry.
+
+        Precondition: keyboard state exists (checked by caller).
+        """
         state = self._get_state()
-        if not state:
-            return None
         for group in reversed(state.undo_stack):
             change = group.get_change(key)
             if change is not None and hasattr(change, 'new_value'):
                 return change.new_value
         return None
+
+    def _update_pending(self, state: KeyboardState, key: Tuple,
+                        change: Change, local_value: Any) -> None:
+        """Update pending state after undo/redo.
+
+        Compares local_value against device/original to determine if pending needed.
+        """
+        # What's the reference value (on device, or original if never saved)?
+        device_value = state.committed.get(key)
+        if device_value is not None:
+            reference_value = device_value
+        elif key in state.pending:
+            reference_value = state.pending[key].old_value
+        else:
+            reference_value = change.old_value
+
+        if local_value == reference_value:
+            # Matches device/original - no pending
+            if key in state.pending:
+                del state.pending[key]
+        else:
+            # Differs - update pending
+            if key in state.pending:
+                state.pending[key].new_value = local_value
+            else:
+                updated = copy.copy(change)
+                updated.old_value = reference_value
+                updated.new_value = local_value
+                state.pending[key] = updated
 
     def redo(self) -> bool:
         """Redo the last undone change group.
@@ -339,24 +295,15 @@ class ChangeManager(QObject):
             affected_keys.add(key)
 
             # Restore new value in keyboard state
-            if self.keyboard is not None:
-                self._restore_value(change, use_old=False)
+            self._restore_value(change, use_old=False)
 
-                # In auto_commit mode, also update device
-                if state.auto_commit:
+            if state.auto_commit:
+                # In auto_commit mode, update device
+                if self.keyboard is not None:
                     change.apply(self.keyboard)
-
-            # Re-add to pending (only if not auto_commit)
-            if not state.auto_commit:
-                # Check if we're redoing back to committed value
-                if key in state.committed and state.committed[key] == change.new_value:
-                    # Local now matches device, remove from pending
-                    if key in state.pending:
-                        del state.pending[key]
-                elif key in state.pending:
-                    state.pending[key].merge(change)
-                else:
-                    state.pending[key] = change
+            else:
+                # In normal mode, update pending tracking
+                self._update_pending(state, key, change, change.new_value)
 
         self._emit_state_changes()
         self.values_restored.emit(affected_keys)
@@ -502,5 +449,9 @@ class ChangeManager(QObject):
             self._prev_auto_commit = auto_commit
             self.auto_commit_changed.emit(auto_commit)
 
-        self.modified_keys_changed.emit(self.get_modified_keys())
+        modified_keys = self.get_modified_keys()
+        if modified_keys != self._prev_modified_keys:
+            self._prev_modified_keys = modified_keys
+            self.modified_keys_changed.emit(modified_keys)
+
         self.changed.emit()

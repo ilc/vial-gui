@@ -5,6 +5,8 @@ pkgs.mkShell {
     (python312.withPackages (ps: with ps; [
       qtpy
       pyside6
+      pytest
+      pytest-qt
       hidapi
       keyboard
       simpleeval
@@ -19,5 +21,6 @@ pkgs.mkShell {
   shellHook = ''
     export PYTHONPATH="src/main/python:$PYTHONPATH"
     echo "Run: python src/main/python/main.py"
+    echo "Test: pytest src/main/python/test/"
   '';
 }
