@@ -5,7 +5,6 @@ import traceback
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal, Qt
-from qtpy.QtGui import QPalette, QColor
 
 import sys
 import json
@@ -32,6 +31,7 @@ def init_storage(settings_json):
     except (json.JSONDecodeError, TypeError):
         settings = {}
     storage.init(settings)
+
 
 def show_exception_box(log_msg):
     if QtWidgets.QApplication.instance() is not None:
@@ -74,10 +74,6 @@ def web_get_resource(name):
 
 
 def main(app):
-    # CJK fonts not loaded - Qt WASM font fallback doesn't work for CJK Unified Ideographs.
-    # Kana/hangul would render but kanji wouldn't, causing inconsistent display.
-    # See web/fonts/create-subset.sh for font generation if Qt WASM improves.
-
     font = app.font()
     font.setPointSize(10)
     app.setFont(font)
@@ -87,13 +83,10 @@ def main(app):
         app.build_settings = json.loads(inf.read())
     qt_exception_hook = UncaughtHook()
 
-    # Not sure of the best way to do this.
     global window
     window = MainWindow(app)
-    # Hide title bar and show fullscreen in web version since it's running in a browser
+    # Fullscreen frameless for web
     window.setWindowFlags(Qt.FramelessWindowHint)
-    # Set dark background to match theme and avoid harsh white bar
     window.setStyleSheet("QMainWindow { background-color: #2d2d2d; }")
     window.showFullScreen()
-
     app.processEvents()

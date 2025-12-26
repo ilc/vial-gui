@@ -10,8 +10,9 @@ rm -rf build/*
 
 pushd build
 
-VIAL_VER=$(git rev-parse HEAD)
-WEB_VER=$(git rev-parse HEAD)
+# Use hardcoded versions since git may not be available
+VIAL_VER="local"
+WEB_VER="local"
 VIA_STACK_VER="UNKNOWN"
 UNIQVER=$(echo ${VIAL_VER} ${WEB_VER} ${VIA_STACK_VER} | sha256sum | awk '{print $1}')
 
@@ -24,9 +25,9 @@ cp ../../src/build/settings/base.json usr/local/build_settings.json
 cp -r ../../src/main/python/* usr/local/lib/python3.11
 cp ../simpleeval.py usr/local/lib/python3.11
 
-# Install qtpy (pure Python) - from container
-cp -r /vial-web/deps/qtpy usr/local/lib/python3.11/
-cp -r /vial-web/deps/packaging usr/local/lib/python3.11/
+# Install qtpy (pure Python) - use local copies until container updated
+cp -r ../qtpy usr/local/lib/python3.11/
+cp -r ../packaging usr/local/lib/python3.11/
 
 emcc \
     --preload-file="./usr/local" \
