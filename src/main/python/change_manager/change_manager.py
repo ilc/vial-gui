@@ -219,7 +219,11 @@ class ChangeManager(QObject):
             if not state.auto_commit:
                 earlier_value = self._find_earlier_value(key)
                 if earlier_value is not None:
-                    if key in state.pending:
+                    # Check if earlier value matches committed (no change needed)
+                    if key in state.committed and state.committed[key] == earlier_value:
+                        if key in state.pending:
+                            del state.pending[key]
+                    elif key in state.pending:
                         state.pending[key].new_value = earlier_value
                     elif key in state.committed:
                         # Undoing to an earlier value, but device has committed value
