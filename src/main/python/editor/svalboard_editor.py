@@ -227,7 +227,12 @@ class SvalboardEditor(BasicEditor):
                 cm.values_restored.disconnect(self._on_values_restored)
             except TypeError:
                 pass
+            try:
+                cm.saved.disconnect(self._on_saved)
+            except TypeError:
+                pass
             cm.values_restored.connect(self._on_values_restored)
+            cm.saved.connect(self._on_saved)
             self._update_layer_visibility()
             self._update_dpi_dropdowns()
             self._update_mh_timeout_dropdown()
@@ -243,6 +248,10 @@ class SvalboardEditor(BasicEditor):
                 break
         if needs_refresh:
             self.update_from_keyboard()
+
+    def _on_saved(self):
+        """Clear highlights after changes are pushed to device."""
+        self._update_buttons()
 
     def _update_dpi_dropdowns(self):
         """Populate DPI dropdowns with values from firmware"""

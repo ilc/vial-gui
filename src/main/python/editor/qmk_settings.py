@@ -266,7 +266,12 @@ class QmkSettings(BasicEditor):
                 cm.values_restored.disconnect(self._on_values_restored)
             except TypeError:
                 pass
+            try:
+                cm.saved.disconnect(self._on_saved)
+            except TypeError:
+                pass
             cm.values_restored.connect(self._on_values_restored)
+            cm.saved.connect(self._on_saved)
             self.reload_settings()
 
     def _on_values_restored(self, affected_keys):
@@ -290,6 +295,10 @@ class QmkSettings(BasicEditor):
                     if field.qsid == affected_qsid:
                         self.tabs_widget.setCurrentIndex(tab_idx)
                         return
+
+    def _on_saved(self):
+        """Clear highlights after changes are pushed to device."""
+        self._update_ui_state()
 
     def valid(self):
         return isinstance(self.device, VialKeyboard) and \
