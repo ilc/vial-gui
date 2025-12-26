@@ -889,4 +889,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("pos", self.pos())
         self.settings.setValue("maximized", self.isMaximized())
 
+        # Stop autorefresh thread before closing to prevent crash on exit
+        self.autorefresh.thread.stop()
+
         e.accept()

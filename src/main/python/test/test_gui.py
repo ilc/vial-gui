@@ -194,6 +194,17 @@ class FakeAppctx:
 all_mw = []
 
 
+@pytest.fixture(autouse=True)
+def cleanup_threads():
+    """Stop all autorefresh threads after each test."""
+    yield
+    # Stop and remove all MainWindow threads created during this test
+    while all_mw:
+        mw = all_mw.pop()
+        if hasattr(mw, 'autorefresh') and hasattr(mw.autorefresh, 'thread'):
+            mw.autorefresh.thread.stop()
+
+
 def prepare(qtbot, keyboard_json, combos=None, tap_dance=None):
     import hidraw as hid
 
@@ -212,8 +223,8 @@ def prepare(qtbot, keyboard_json, combos=None, tap_dance=None):
     # This matches the old behavior before ChangeManager integration
     ChangeManager.instance().auto_commit = True
 
-    # Patch closeEvent and on_device_selected to clear ChangeManager before checking
-    # This prevents the "unsaved changes" dialogs from appearing during test cleanup
+    # Patch closeEvent to clear ChangeManager before checking for pending changes
+    # This prevents the "unsaved changes" dialog from appearing during test cleanup
     original_close_event = mw.closeEvent
     def patched_close_event(e):
         ChangeManager.instance().clear()

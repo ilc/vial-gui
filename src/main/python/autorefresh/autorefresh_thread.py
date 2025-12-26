@@ -23,6 +23,7 @@ class AutorefreshThread(QThread):
     def __init__(self):
         super().__init__()
 
+        self._stop_requested = False
         self.current_device = None
         self.devices = []
         self.locked = False
@@ -34,9 +35,14 @@ class AutorefreshThread(QThread):
         self.via_stack_json = {"definitions": {}}
 
     def run(self):
-        while True:
+        while not self._stop_requested:
             self.update()
             time.sleep(1)
+
+    def stop(self):
+        """Stop the thread and wait for it to finish."""
+        self._stop_requested = True
+        self.wait(2000)  # Wait up to 2 seconds
 
     def lock(self):
         with self.mutex:
