@@ -262,3 +262,45 @@ jobs:
       with:
         name: Vial-Linux
         path: Vial-x86_64.AppImage
+
+  build-web:
+    runs-on: ubuntu-22.04
+
+    container:
+      image: ghcr.io/ilc/vial-gui-build:latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add safe directory
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    - name: Build
+      run: |
+        cd web
+        ./build.sh
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: vial-web
+        path: web/build
+
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: web/build
+
+  deploy-web:
+    if: github.ref == 'refs/heads/sval-gui'
+    needs: build-web
+    runs-on: ubuntu-22.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deploy
+      uses: actions/deploy-pages@v4
