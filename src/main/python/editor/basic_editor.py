@@ -7,6 +7,7 @@ class BasicEditor(QVBoxLayout):
         super().__init__(parent)
 
         self.device = None
+        self._cm_connected = False
 
     def valid(self):
         raise NotImplementedError
@@ -19,15 +20,12 @@ class BasicEditor(QVBoxLayout):
         """Connect to ChangeManager signals. Called automatically by rebuild()."""
         from change_manager import ChangeManager
         cm = ChangeManager.instance()
-        for sig, handler in [
-            (cm.values_restored, self._on_values_restored),
-            (cm.saved, self._on_saved),
-        ]:
-            try:
-                sig.disconnect(handler)
-            except TypeError:
-                pass
-            sig.connect(handler)
+        if self._cm_connected:
+            cm.values_restored.disconnect(self._on_values_restored)
+            cm.saved.disconnect(self._on_saved)
+        cm.values_restored.connect(self._on_values_restored)
+        cm.saved.connect(self._on_saved)
+        self._cm_connected = True
 
     def _on_values_restored(self, affected_keys):
         """Called after undo/redo. Override to reload affected entries.

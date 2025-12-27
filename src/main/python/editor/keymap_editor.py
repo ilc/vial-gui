@@ -35,6 +35,7 @@ class KeymapEditor(BasicEditor):
         super().__init__()
 
         self.layout_editor = layout_editor
+        self._cm_changed_connected = False
 
         self.layout_layers = QHBoxLayout()
         self.layout_size = QHBoxLayout()
@@ -172,11 +173,10 @@ class KeymapEditor(BasicEditor):
 
             # Also connect to 'changed' for layer button updates
             cm = ChangeManager.instance()
-            try:
+            if self._cm_changed_connected:
                 cm.changed.disconnect(self.on_change_manager_changed)
-            except TypeError:
-                pass
             cm.changed.connect(self.on_change_manager_changed)
+            self._cm_changed_connected = True
 
             # get number of layers
             self.rebuild_layers()
