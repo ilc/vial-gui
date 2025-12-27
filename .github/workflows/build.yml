@@ -133,11 +133,23 @@ jobs:
     - name: Rename app bundle
       run: mv build-nuitka/output/main.app build-nuitka/output/Vial.app
 
+    - name: Create DMG
+      run: |
+        # Create a temporary directory for the DMG contents
+        mkdir -p dmg-staging
+        cp -R build-nuitka/output/Vial.app dmg-staging/
+
+        # Create a symbolic link to Applications for easy drag-and-drop install
+        ln -s /Applications dmg-staging/Applications
+
+        # Create the DMG
+        hdiutil create -volname "Vial" -srcfolder dmg-staging -ov -format UDZO Vial-macOS.dmg
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: Vial-macOS
-        path: build-nuitka/output/Vial.app/
+        path: Vial-macOS.dmg
 
   build-linux:
     runs-on: ubuntu-22.04

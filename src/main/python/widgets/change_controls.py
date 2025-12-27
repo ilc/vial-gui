@@ -16,13 +16,14 @@ class ChangeControls(QWidget):
 
         self.cm = ChangeManager.instance()
         is_web = sys.platform == "emscripten"
+        mod = "⌘" if sys.platform == "darwin" else "^"
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
         # Undo button - no shortcut on web (browser captures Ctrl+Z)
-        self.btn_undo = QPushButton("Undo" if is_web else "Undo ^Z")
+        self.btn_undo = QPushButton("Undo" if is_web else f"Undo {mod}Z")
         if not is_web:
             self.btn_undo.setShortcut(QKeySequence.Undo)
         self.btn_undo.clicked.connect(self._on_undo)
@@ -30,7 +31,7 @@ class ChangeControls(QWidget):
         layout.addWidget(self.btn_undo)
 
         # Redo button - no shortcut on web
-        self.btn_redo = QPushButton("Redo" if is_web else "Redo ^⇧Z")
+        self.btn_redo = QPushButton("Redo" if is_web else f"Redo {mod}⇧Z")
         if not is_web:
             self.btn_redo.setShortcut(QKeySequence("Ctrl+Shift+Z"))
         self.btn_redo.clicked.connect(self._on_redo)
@@ -47,7 +48,7 @@ class ChangeControls(QWidget):
         layout.addWidget(self.btn_revert)
 
         # Push button - no shortcut on web (browser captures Ctrl+S)
-        self.btn_push = QPushButton("Push" if is_web else "Push ^S")
+        self.btn_push = QPushButton("Push" if is_web else f"Push {mod}S")
         if not is_web:
             self.btn_push.setShortcut(QKeySequence.Save)
         self.btn_push.clicked.connect(self._on_push)

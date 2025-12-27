@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Toolbar for Save/Undo/Redo operations."""
+import sys
 from qtpy.QtWidgets import QToolBar, QLabel, QWidget, QSizePolicy
 from qtpy.QtGui import QKeySequence, QAction
 from qtpy.QtCore import Qt
@@ -16,19 +17,20 @@ class ChangeToolbar(QToolBar):
         self.setFloatable(False)
 
         self.cm = ChangeManager.instance()
+        mod = "Cmd" if sys.platform == "darwin" else "Ctrl"
 
         # Save action
         self.save_action = QAction("Save", self)
-        self.save_action.setShortcut(QKeySequence.Save)  # Ctrl+S
-        self.save_action.setToolTip("Save all pending changes to device (Ctrl+S)")
+        self.save_action.setShortcut(QKeySequence.Save)
+        self.save_action.setToolTip(f"Save all pending changes to device ({mod}+S)")
         self.save_action.triggered.connect(self._on_save)
         self.save_action.setEnabled(False)
         self.addAction(self.save_action)
 
         # Undo action
         self.undo_action = QAction("Undo", self)
-        self.undo_action.setShortcut(QKeySequence.Undo)  # Ctrl+Z
-        self.undo_action.setToolTip("Undo last change (Ctrl+Z)")
+        self.undo_action.setShortcut(QKeySequence.Undo)
+        self.undo_action.setToolTip(f"Undo last change ({mod}+Z)")
         self.undo_action.triggered.connect(self._on_undo)
         self.undo_action.setEnabled(False)
         self.addAction(self.undo_action)
@@ -36,7 +38,7 @@ class ChangeToolbar(QToolBar):
         # Redo action
         self.redo_action = QAction("Redo", self)
         self.redo_action.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        self.redo_action.setToolTip("Redo last undone change (Ctrl+Shift+Z)")
+        self.redo_action.setToolTip(f"Redo last undone change ({mod}+Shift+Z)")
         self.redo_action.triggered.connect(self._on_redo)
         self.redo_action.setEnabled(False)
         self.addAction(self.redo_action)
